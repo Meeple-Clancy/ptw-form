@@ -1,88 +1,34 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Play to Win Entry</title>
-  <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; }
-    .suggestions { border: 1px solid #ccc; max-height: 200px; overflow-y: auto; margin-top: 0; padding-left: 0; }
-    .suggestions li { list-style: none; padding: 4px 8px; cursor: pointer; }
-    .suggestions li:hover { background: #eee; }
-    label { display: block; margin-top: 1rem; }
-    input[type="text"], input[type="number"] { width: 100%; padding: 6px; }
-    button { margin-top: 1rem; padding: 8px 12px; }
-  </style>
-</head>
-<body>
-  <h1>Play to Win Entry</h1>
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const game = gameNameHidden.value || gameInput.value;
+  const badge = document.getElementById('badge-input').value;
 
-  <form id="ptw-form">
-    <label for="game-input">Game</label>
-    <input id="game-input" type="text" autocomplete="off" placeholder="Start typing a game name…">
-    <ul id="suggestions" class="suggestions"></ul>
-    <input type="hidden" name="gameName" id="game-name">
+  if (!game) {
+    status.textContent = 'Please choose a game from the list.';
+    return;
+  }
 
-    <label for="badge-input">Badge number</label>
-    <input id="badge-input" name="badgeNumber" type="number" required>
+  status.textContent = 'Saving entry...';
 
-    <button type="submit">Submit entry</button>
-  </form>
-
-  <p id="status"></p>
-
-  <script>
-    // TODO: replace this list with your real Play to Win games
-    const games = [
-      "Heat: Pedal to the Metal",
-      "Wingspan",
-      "Cascadia",
-      "Ark Nova"
-    ];
-
-    const gameInput = document.getElementById('game-input');
-    const suggestions = document.getElementById('suggestions');
-    const gameNameHidden = document.getElementById('game-name');
-    const form = document.getElementById('ptw-form');
-    const status = document.getElementById('status');
-
-    gameInput.addEventListener('input', () => {
-      const q = gameInput.value.toLowerCase();
-      suggestions.innerHTML = '';
-      gameNameHidden.value = '';
-
-      if (!q) return;
-
-      games
-        .filter(name => name.toLowerCase().includes(q))
-        .slice(0, 10)
-        .forEach(name => {
-          const li = document.createElement('li');
-          li.textContent = name;
-          li.onclick = () => {
-            gameInput.value = name;
-            gameNameHidden.value = name;
-            suggestions.innerHTML = '';
-          };
-          suggestions.appendChild(li);
-        });
-    });
-
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const game = gameNameHidden.value || gameInput.value;
-      const badge = document.getElementById('badge-input').value;
-
-      if (!game) {
-        status.textContent = 'Please choose a game from the list.';
-        return;
-      }
-
-      // For now, just log locally – later we’ll wire this to Google Sheets
-      console.log('Entry:', { game, badge });
-      status.textContent = 'Entry recorded (locally). You can now enter another.';
+  fetch('PASTE_YOUR_WEB_APP_URL_HERE', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ game, badge })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'ok') {
+      status.textContent = 'Entry saved. You can now enter another.';
       form.reset();
       suggestions.innerHTML = '';
-    });
-  </script>
-</body>
-</html>
+    } else {
+      status.textContent = 'There was a problem saving. Please try again.';
+    }
+  })
+  .catch(err => {
+    console.error(err);
+    status.textContent = 'Error talking to the server. Please try again.';
+  });
+});

@@ -24,20 +24,16 @@
         margin-top: 20px;
         padding: 10px 18px;
       }
+      #message {
+        margin-top: 16px;
+        font-weight: bold;
+      }
     </style>
   </head>
   <body>
     <h1>Play to Win Entry</h1>
 
-    <!-- Hidden iframe so the page doesn't navigate away -->
-    <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
-
-    <form id="ptw-form"
-          method="POST"
-          target="hidden_iframe"
-          action="https://script.google.com/macros/s/AKfycbzzyTVa-WYFfIuznmdcSqFtvGr4pyqnit9YACqKewnn8agKDS_qCT3iQ-bS4h9RRqGkvQ/exec">
-      <!-- Replace YOUR_WEB_APP_URL_HERE with the full /exec URL -->
-
+    <form id="ptw-form">
       <label for="game_name">Game</label>
       <select id="game_name" name="game_name" required>
         <option value="">Select a game</option>
@@ -59,6 +55,46 @@
       <button type="submit">Submit entry</button>
     </form>
 
+    <div id="message"></div>
+
     <p>After submitting, check your Google Sheet for the new row.</p>
+
+    <script>
+      const WEB_APP_URL =
+        'https://script.google.com/macros/s/AKfycbzzyTVa-WYFfIuznmdcSqFtvGr4pyqnit9YACqKewnn8agKDS_qCT3iQ-bS4h9RRqGkvQ/exec';
+
+      const form = document.getElementById('ptw-form');
+      const messageEl = document.getElementById('message');
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        messageEl.textContent = 'Submitting...';
+
+        const formData = new FormData(form);
+
+        try {
+          const response = await fetch(WEB_APP_URL, {
+            method: 'POST',
+            body: formData
+          });
+
+          const data = await response.json();
+
+          if (data.status === 'ok') {
+            messageEl.textContent = 'Entry recorded. You can submit another.';
+            // Prefill the form with the returned values
+            document.getElementById('game_name').value = data.game_name || '';
+            document.getElementById('catalogID').value = data.catalogID || '';
+            document.getElementById('PTWID').value = data.PTWID || '';
+            document.getElementById('badge').value = data.badge || '';
+          } else {
+            messageEl.textContent = 'There was a problem recording your entry.';
+          }
+        } catch (err) {
+          console.error(err);
+          messageEl.textContent = 'Network or script error submitting entry.';
+        }
+      });
+    </script>
   </body>
 </html>

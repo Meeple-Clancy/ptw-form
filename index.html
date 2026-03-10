@@ -43,12 +43,6 @@
         <!-- add more as needed -->
       </select>
 
-      <label for="catalogID">Catalog ID</label>
-      <input type="text" id="catalogID" name="catalogID" required>
-
-      <label for="PTWID">PTW ID</label>
-      <input type="text" id="PTWID" name="PTWID" required>
-
       <label for="badge">Badge number</label>
       <input type="text" id="badge" name="badge" required>
 
@@ -82,10 +76,8 @@
 
           if (data.status === 'ok') {
             messageEl.textContent = 'Entry recorded. You can submit another.';
-            // Prefill the form with the returned values
+            // Prefill with last submitted values
             document.getElementById('game_name').value = data.game_name || '';
-            document.getElementById('catalogID').value = data.catalogID || '';
-            document.getElementById('PTWID').value = data.PTWID || '';
             document.getElementById('badge').value = data.badge || '';
           } else {
             messageEl.textContent = 'There was a problem recording your entry.';

@@ -14,17 +14,31 @@
         margin-top: 16px;
         margin-bottom: 4px;
       }
-      input[type="text"],
-      select {
+      input[type="text"] {
         width: 100%;
         padding: 8px;
         box-sizing: border-box;
+      }
+      ul#suggestions {
+        list-style: none;
+        margin: 4px 0 0;
+        padding: 0;
+        border: 1px solid #ccc;
+        max-height: 150px;
+        overflow-y: auto;
+      }
+      ul#suggestions li {
+        padding: 4px 8px;
+        cursor: pointer;
+      }
+      ul#suggestions li:hover {
+        background: #eee;
       }
       button {
         margin-top: 20px;
         padding: 10px 18px;
       }
-      #message {
+      #status {
         margin-top: 16px;
         font-weight: bold;
       }
@@ -33,15 +47,17 @@
   <body>
     <h1>Play to Win Entry</h1>
 
-    <form id="ptw-form">
-      <label for="game_name">Game</label>
-      <select id="game_name" name="game_name" required>
-        <option value="">Select a game</option>
-        <option value="Wingspan">Wingspan</option>
-        <option value="Catan">Catan</option>
-        <option value="Terraforming Mars">Terraforming Mars</option>
-        <!-- add more as needed -->
-      </select>
+    <form id="ptw-form" method="POST"
+          action="https://script.google.com/macros/s/AKfycbzzyTVa-WYFfIuznmdcSqFtvGr4pyqnit9YACqKewnn8agKDS_qCT3iQ-bS4h9RRqGkvQ/exec">
+
+      <label for="game-input">Game (search by name or catalog ID)</label>
+      <input type="text" id="game-input" autocomplete="off" required>
+      <ul id="suggestions"></ul>
+
+      <!-- hidden fields actually sent to Apps Script -->
+      <input type="hidden" id="game-name"  name="game_name">
+      <input type="hidden" id="catalog-id" name="catalogID">
+      <input type="hidden" id="ptw-id"     name="PTWID">
 
       <label for="badge">Badge number</label>
       <input type="text" id="badge" name="badge" required>
@@ -49,43 +65,80 @@
       <button type="submit">Submit entry</button>
     </form>
 
-    <div id="message"></div>
+    <div id="status"></div>
 
     <p>After submitting, check your Google Sheet for the new row.</p>
 
     <script>
-      const WEB_APP_URL =
-        'https://script.google.com/macros/s/AKfycbzzyTVa-WYFfIuznmdcSqFtvGr4pyqnit9YACqKewnn8agKDS_qCT3iQ-bS4h9RRqGkvQ/exec';
+      document.addEventListener('DOMContentLoaded', () => {
+        const games = [
+          { catalogID: 'WING-001', game_name: 'Wingspan', PTWID: 1 },
+          { catalogID: 'WING-002', game_name: 'Wingspan', PTWID: 1 },
+          { catalogID: 'HEAT-001', game_name: 'Heat: Pedal to the Metal', PTWID: 2 }
+          // add more entries here
+        ];
 
-      const form = document.getElementById('ptw-form');
-      const messageEl = document.getElementById('message');
+        const gameInput      = document.getElementById('game-input');
+        const suggestions    = document.getElementById('suggestions');
+        const gameNameHidden = document.getElementById('game-name');
+        const catalogHidden  = document.getElementById('catalog-id');
+        const ptwHidden      = document.getElementById('ptw-id');
+        const form           = document.getElementById('ptw-form');
+        const status         = document.getElementById('status');
 
-      form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        messageEl.textContent = 'Submitting...';
+        let selectedGame = null;
 
-        const formData = new FormData(form);
+        gameInput.addEventListener('input', () => {
+          const q = gameInput.value.toLowerCase();
+          suggestions.innerHTML = '';
+          gameNameHidden.value = '';
+          catalogHidden.value = '';
+          ptwHidden.value = '';
+          selectedGame = null;
 
-        try {
-          const response = await fetch(WEB_APP_URL, {
-            method: 'POST',
-            body: formData
-          });
+          if (!q) return;
 
-          const data = await response.json();
+          games
+            .filter(g =>
+              g.game_name.toLowerCase().includes(q) ||
+              g.catalogID.toLowerCase().includes(q)
+            )
+            .slice(0, 10)
+            .forEach(g => {
+              const li = document.createElement('li');
+              li.textContent = `${g.game_name} (${g.catalogID})`;
+              li.onclick = () => {
+                gameInput.value = g.catalogID;
+                gameNameHidden.value = g.game_name;
+                catalogHidden.value = g.catalogID;
+                ptwHidden.value = g.PTWID;
+                selectedGame = g;
+                suggestions.innerHTML = '';
+              };
+              suggestions.appendChild(li);
+            });
+        });
 
-          if (data.status === 'ok') {
-            messageEl.textContent = 'Entry recorded. You can submit another.';
-            // Prefill with last submitted values
-            document.getElementById('game_name').value = data.game_name || '';
-            document.getElementById('badge').value = data.badge || '';
-          } else {
-            messageEl.textContent = 'There was a problem recording your entry.';
+        form.addEventListener('submit', (e) => {
+          if (!selectedGame) {
+            e.preventDefault();
+            status.textContent = 'Please choose a game from the list.';
+            return;
           }
-        } catch (err) {
-          console.error(err);
-          messageEl.textContent = 'Network or script error submitting entry.';
-        }
+
+          status.textContent = 'Saving entry...';
+
+          // Allow normal POST to Apps Script, then just show a message/reset
+          setTimeout(() => {
+            status.textContent = 'Entry submitted. You can now enter another.';
+            form.reset();
+            suggestions.innerHTML = '';
+            gameNameHidden.value = '';
+            catalogHidden.value = '';
+            ptwHidden.value = '';
+            selectedGame = null;
+          }, 700);
+        });
       });
     </script>
   </body>

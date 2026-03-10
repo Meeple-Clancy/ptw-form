@@ -33,6 +33,7 @@
             const li = document.createElement('li');
             li.textContent = `${g.game_name} (${g.catalogID})`;
             li.onclick = () => {
+              // show only the catalogID in the input after selection
               gameInput.value = g.catalogID;
               gameNameHidden.value = g.game_name;
               selectedGame = g;
@@ -54,33 +55,10 @@
 
         status.textContent = 'Saving entry...';
 
-        fetch('https://script.google.com/macros/s/AKfycbzzyTVa-WYFfIuznmdcSqFtvGr4pyqnit9YACqKewnn8agKDS_qCT3iQ-bS4h9RRqGkvQ/exec', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            game_name: selectedGame.game_name,
-            catalogID: selectedGame.catalogID,
-            badge: badge,
-            PTWID: selectedGame.PTWID
-          })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.status === 'ok') {
-            status.textContent = 'Entry saved. You can now enter another.';
-            form.reset();
-            suggestions.innerHTML = '';
-            selectedGame = null;
-          } else {
-            status.textContent = 'There was a problem saving. Please try again.';
-          }
-        })
-        .catch(err => {
-          console.error(err);
-          status.textContent = 'Error talking to the server. Please try again.';
-        });
-      });
-    });
-  </script>
+        const formData = new FormData();
+        formData.append('game_name', selectedGame.game_name);
+        formData.append('catalogID', selectedGame.catalogID);
+        formData.append('badge', badge);
+        formData.append('PTWID', selectedGame.PTWID);
+
+        fetch('https://script.google.com/macros/s/AKfycbzzyTVa-WYFfIuznmdcSqF

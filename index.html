@@ -1,21 +1,70 @@
+// Example: replace with your real data
+const games = [
+  { catalogID: 'WING-001', game_name: 'Wingspan', PTWID: 1 },
+  { catalogID: 'WING-002', game_name: 'Wingspan', PTWID: 1 },
+  { catalogID: 'HEAT-001', game_name: 'Heat: Pedal to the Metal', PTWID: 2 }
+];
+
+const gameInput = document.getElementById('game-input');
+const suggestions = document.getElementById('suggestions');
+const gameNameHidden = document.getElementById('game-name'); // keep this
+const form = document.getElementById('ptw-form');
+const status = document.getElementById('status');
+
+// We'll also keep the chosen catalogID and PTWID in memory
+let selectedGame = null;
+
+gameInput.addEventListener('input', () => {
+  const q = gameInput.value.toLowerCase();
+  suggestions.innerHTML = '';
+  gameNameHidden.value = '';
+  selectedGame = null;
+
+  if (!q) return;
+
+  games
+    .filter(g =>
+      g.game_name.toLowerCase().includes(q) ||
+      g.catalogID.toLowerCase().includes(q)
+    )
+    .slice(0, 10)
+      .forEach(g => {
+      const li = document.createElement('li');
+      li.textContent = `${g.game_name} (${g.catalogID})`;
+      li.onclick = () => {
+        // show only the catalogID in the input after selection
+        gameInput.value = g.catalogID;
+        gameNameHidden.value = g.game_name;
+        selectedGame = g;
+        suggestions.innerHTML = '';
+      };
+      suggestions.appendChild(li);
+    });
+});
+
 form.addEventListener('submit', (e) => {
   e.preventDefault();
-  const game = gameNameHidden.value || gameInput.value;
+
   const badge = document.getElementById('badge-input').value;
 
-  if (!game) {
+  if (!selectedGame) {
     status.textContent = 'Please choose a game from the list.';
     return;
   }
 
   status.textContent = 'Saving entry...';
 
-  fetch('PASTE_YOUR_WEB_APP_URL_HERE', {
+  fetch('https://script.google.com/macros/s/AKfycbzzyTVa-WYFfIuznmdcSqFtvGr4pyqnit9YACqKewnn8agKDS_qCT3iQ-bS4h9RRqGkvQ/exec', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ game, badge })
+    body: JSON.stringify({
+      game_name: selectedGame.game_name,
+      catalogID: selectedGame.catalogID,
+      badge: badge,
+      PTWID: selectedGame.PTWID
+    })
   })
   .then(response => response.json())
   .then(data => {
@@ -23,6 +72,7 @@ form.addEventListener('submit', (e) => {
       status.textContent = 'Entry saved. You can now enter another.';
       form.reset();
       suggestions.innerHTML = '';
+      selectedGame = null;
     } else {
       status.textContent = 'There was a problem saving. Please try again.';
     }

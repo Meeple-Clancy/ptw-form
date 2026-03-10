@@ -1,70 +1,114 @@
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const games = [
-      { catalogID: 'WING-001', game_name: 'Wingspan', PTWID: 1 },
-      { catalogID: 'WING-002', game_name: 'Wingspan', PTWID: 1 },
-      { catalogID: 'HEAT-001', game_name: 'Heat: Pedal to the Metal', PTWID: 2 }
-    ];
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Play to Win Entry</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; }
+    .suggestions { border: 1px solid #ccc; max-height: 200px; overflow-y: auto; margin-top: 0; padding-left: 0; }
+    .suggestions li { list-style: none; padding: 4px 8px; cursor: pointer; }
+    .suggestions li:hover { background: #eee; }
+    label { display: block; margin-top: 1rem; }
+    input[type="text"], input[type="number"] { width: 100%; padding: 6px; }
+    button { margin-top: 1rem; padding: 8px 12px; }
+  </style>
+</head>
+<body>
+  <h1>Play to Win Entry</h1>
 
-    const gameInput = document.getElementById('game-input');
-    const suggestions = document.getElementById('suggestions');
-    const gameNameHidden = document.getElementById('game-name');
-    const catalogHidden = document.getElementById('catalog-id');
-    const ptwHidden = document.getElementById('ptw-id');
-    const form = document.getElementById('ptw-form');
-    const status = document.getElementById('status');
+  <form id="ptw-form" method="POST" target="hidden_iframe"
+        action="https://script.google.com/macros/s/AKfycbzzyTVa-WYFfIuznmdcSqFtvGr4pyqnit9YACqKewnn8agKDS_qCT3iQ-bS4h9RRqGkvQ/exec">
+    <label for="game-input">Game (type name or catalog ID)</label>
+    <input id="game-input" type="text" autocomplete="off"
+           placeholder="Start typing a game name or catalog ID…">
+    <ul id="suggestions" class="suggestions"></ul>
 
-    let selectedGame = null;
+    <!-- Hidden fields actually sent to Apps Script -->
+    <input type="hidden" name="game_name" id="game-name">
+    <input type="hidden" name="catalogID" id="catalog-id">
+    <input type="hidden" name="PTWID" id="ptw-id">
 
-    gameInput.addEventListener('input', () => {
-      const q = gameInput.value.toLowerCase();
-      suggestions.innerHTML = '';
-      gameNameHidden.value = '';
-      catalogHidden.value = '';
-      ptwHidden.value = '';
-      selectedGame = null;
+    <label for="badge-input">Badge number</label>
+    <input id="badge-input" name="badge" type="number" required>
 
-      if (!q) return;
+    <button type="submit">Submit entry</button>
+  </form>
 
-      games
-        .filter(g =>
-          g.game_name.toLowerCase().includes(q) ||
-          g.catalogID.toLowerCase().includes(q)
-        )
-        .slice(0, 10)
-        .forEach(g => {
-          const li = document.createElement('li');
-          li.textContent = `${g.game_name} (${g.catalogID})`;
-          li.onclick = () => {
-            gameInput.value = g.catalogID;
-            gameNameHidden.value = g.game_name;
-            catalogHidden.value = g.catalogID;
-            ptwHidden.value = g.PTWID;
-            selectedGame = g;
-            suggestions.innerHTML = '';
-          };
-          suggestions.appendChild(li);
-        });
-    });
+  <!-- Hidden iframe so the form POST doesn't navigate away -->
+  <iframe name="hidden_iframe" style="display:none;"></iframe>
 
-    form.addEventListener('submit', (e) => {
-      if (!selectedGame) {
-        e.preventDefault();
-        status.textContent = 'Please choose a game from the list.';
-        return;
-      }
+  <p id="status"></p>
 
-      status.textContent = 'Saving entry...';
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const games = [
+        { catalogID: 'WING-001', game_name: 'Wingspan', PTWID: 1 },
+        { catalogID: 'WING-002', game_name: 'Wingspan', PTWID: 1 },
+        { catalogID: 'HEAT-001', game_name: 'Heat: Pedal to the Metal', PTWID: 2 }
+      ];
 
-      setTimeout(() => {
-        status.textContent = 'Entry submitted. You can now enter another.';
-        form.reset();
+      const gameInput = document.getElementById('game-input');
+      const suggestions = document.getElementById('suggestions');
+      const gameNameHidden = document.getElementById('game-name');
+      const catalogHidden = document.getElementById('catalog-id');
+      const ptwHidden = document.getElementById('ptw-id');
+      const form = document.getElementById('ptw-form');
+      const status = document.getElementById('status');
+
+      let selectedGame = null;
+
+      gameInput.addEventListener('input', () => {
+        const q = gameInput.value.toLowerCase();
         suggestions.innerHTML = '';
         gameNameHidden.value = '';
         catalogHidden.value = '';
         ptwHidden.value = '';
         selectedGame = null;
-      }, 700);
+
+        if (!q) return;
+
+        games
+          .filter(g =>
+            g.game_name.toLowerCase().includes(q) ||
+            g.catalogID.toLowerCase().includes(q)
+          )
+          .slice(0, 10)
+          .forEach(g => {
+            const li = document.createElement('li');
+            li.textContent = `${g.game_name} (${g.catalogID})`;
+            li.onclick = () => {
+              gameInput.value = g.catalogID;
+              gameNameHidden.value = g.game_name;
+              catalogHidden.value = g.catalogID;
+              ptwHidden.value = g.PTWID;
+              selectedGame = g;
+              suggestions.innerHTML = '';
+            };
+            suggestions.appendChild(li);
+          });
+      });
+
+      form.addEventListener('submit', (e) => {
+        if (!selectedGame) {
+          e.preventDefault();
+          status.textContent = 'Please choose a game from the list.';
+          return;
+        }
+
+        status.textContent = 'Saving entry...';
+
+        // Let the normal form POST happen to Apps Script via the hidden iframe.
+        setTimeout(() => {
+          status.textContent = 'Entry submitted. You can now enter another.';
+          form.reset();
+          suggestions.innerHTML = '';
+          gameNameHidden.value = '';
+          catalogHidden.value = '';
+          ptwHidden.value = '';
+          selectedGame = null;
+        }, 700);
+      });
     });
-  });
-</script>
+  </script>
+</body>
+</html>

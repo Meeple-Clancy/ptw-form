@@ -50,11 +50,11 @@
     <form id="ptw-form" method="POST"
           action="https://script.google.com/macros/s/AKfycbzzyTVa-WYFfIuznmdcSqFtvGr4pyqnit9YACqKewnn8agKDS_qCT3iQ-bS4h9RRqGkvQ/exec">
 
-      <label for="game-input">Game (search by name or catalog ID)</label>
+      <label for="game-input">Game (type name or catalog ID)</label>
       <input type="text" id="game-input" autocomplete="off" required>
       <ul id="suggestions"></ul>
 
-      <!-- hidden fields actually sent to Apps Script -->
+      <!-- hidden fields sent to Apps Script -->
       <input type="hidden" id="game-name"  name="game_name">
       <input type="hidden" id="catalog-id" name="catalogID">
       <input type="hidden" id="ptw-id"     name="PTWID">
@@ -75,7 +75,7 @@
           { catalogID: 'WING-001', game_name: 'Wingspan', PTWID: 1 },
           { catalogID: 'WING-002', game_name: 'Wingspan', PTWID: 1 },
           { catalogID: 'HEAT-001', game_name: 'Heat: Pedal to the Metal', PTWID: 2 }
-          // add more entries here
+          // add all your games here
         ];
 
         const gameInput      = document.getElementById('game-input');
@@ -128,7 +128,7 @@
 
           status.textContent = 'Saving entry...';
 
-          // Allow normal POST to Apps Script, then just show a message/reset
+          // Let the normal POST go through, then reset UI
           setTimeout(() => {
             status.textContent = 'Entry submitted. You can now enter another.';
             form.reset();

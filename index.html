@@ -47,6 +47,7 @@
   <body>
     <h1>Play to Win Entry</h1>
 
+    <!-- NOTE: no method / action here -->
     <form id="ptw-form">
       <label for="game-input">Game (type name or catalog ID)</label>
       <input type="text" id="game-input" autocomplete="off" required>
@@ -127,7 +128,7 @@
             return;
           }
 
-          e.preventDefault();
+          e.preventDefault();  // stop normal navigation
           statusEl.textContent = 'Saving entry...';
 
           try {

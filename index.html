@@ -47,9 +47,7 @@
   <body>
     <h1>Play to Win Entry</h1>
 
-    <form id="ptw-form" method="POST"
-          action="https://script.google.com/macros/s/AKfycbzzyTVa-WYFfIuznmdcSqFtvGr4pyqnit9YACqKewnn8agKDS_qCT3iQ-bS4h9RRqGkvQ/exec">
-
+    <form id="ptw-form">
       <label for="game-input">Game (type name or catalog ID)</label>
       <input type="text" id="game-input" autocomplete="off" required>
       <ul id="suggestions"></ul>
@@ -78,13 +76,16 @@
           // add all your games here
         ];
 
+        const WEB_APP_URL =
+          'https://script.google.com/macros/s/AKfycbzzyTVa-WYFfIuznmdcSqFtvGr4pyqnit9YACqKewnn8agKDS_qCT3iQ-bS4h9RRqGkvQ/exec';
+
         const gameInput      = document.getElementById('game-input');
         const suggestions    = document.getElementById('suggestions');
         const gameNameHidden = document.getElementById('game-name');
         const catalogHidden  = document.getElementById('catalog-id');
         const ptwHidden      = document.getElementById('ptw-id');
         const form           = document.getElementById('ptw-form');
-        const status         = document.getElementById('status');
+        const statusEl       = document.getElementById('status');
 
         let selectedGame = null;
 
@@ -119,25 +120,39 @@
             });
         });
 
-        form.addEventListener('submit', (e) => {
+        form.addEventListener('submit', async (e) => {
           if (!selectedGame) {
             e.preventDefault();
-            status.textContent = 'Please choose a game from the list.';
+            statusEl.textContent = 'Please choose a game from the list.';
             return;
           }
 
-          status.textContent = 'Saving entry...';
+          e.preventDefault();
+          statusEl.textContent = 'Saving entry...';
 
-          // Let the normal POST go through, then reset UI
-          setTimeout(() => {
-            status.textContent = 'Entry submitted. You can now enter another.';
-            form.reset();
-            suggestions.innerHTML = '';
-            gameNameHidden.value = '';
-            catalogHidden.value = '';
-            ptwHidden.value = '';
-            selectedGame = null;
-          }, 700);
+          try {
+            const formData = new FormData(form);
+            const resp = await fetch(WEB_APP_URL, {
+              method: 'POST',
+              body: formData
+            });
+            const data = await resp.json();
+
+            if (data.status === 'ok') {
+              statusEl.textContent = 'Entry submitted. You can now enter another.';
+              form.reset();
+              suggestions.innerHTML = '';
+              gameNameHidden.value = '';
+              catalogHidden.value = '';
+              ptwHidden.value = '';
+              selectedGame = null;
+            } else {
+              statusEl.textContent = 'There was a problem recording your entry.';
+            }
+          } catch (err) {
+            console.error(err);
+            statusEl.textContent = 'Network or script error submitting entry.';
+          }
         });
       });
     </script>

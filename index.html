@@ -1,3 +1,35 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Play to Win Entry</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; }
+    .suggestions { border: 1px solid #ccc; max-height: 200px; overflow-y: auto; margin-top: 0; padding-left: 0; }
+    .suggestions li { list-style: none; padding: 4px 8px; cursor: pointer; }
+    .suggestions li:hover { background: #eee; }
+    label { display: block; margin-top: 1rem; }
+    input[type="text"], input[type="number"] { width: 100%; padding: 6px; }
+    button { margin-top: 1rem; padding: 8px 12px; }
+  </style>
+</head>
+<body>
+  <h1>Play to Win Entry</h1>
+
+  <form id="ptw-form">
+    <label for="game-input">Game (type name or catalog ID)</label>
+    <input id="game-input" type="text" autocomplete="off" placeholder="Start typing a game name or catalog ID…">
+    <ul id="suggestions" class="suggestions"></ul>
+    <input type="hidden" name="gameName" id="game-name">
+
+    <label for="badge-input">Badge number</label>
+    <input id="badge-input" name="badgeNumber" type="number" required>
+
+    <button type="submit">Submit entry</button>
+  </form>
+
+  <p id="status"></p>
+
   <script>
     // Example: replace with your real data
     const games = [
@@ -8,7 +40,7 @@
 
     const gameInput = document.getElementById('game-input');
     const suggestions = document.getElementById('suggestions');
-    const gameNameHidden = document.getElementById('game-name'); // keep this
+    const gameNameHidden = document.getElementById('game-name');
     const form = document.getElementById('ptw-form');
     const status = document.getElementById('status');
 
@@ -32,6 +64,7 @@
           const li = document.createElement('li');
           li.textContent = `${g.game_name} (${g.catalogID})`;
           li.onclick = () => {
+            // show only the catalogID in the input after selection
             gameInput.value = g.catalogID;
             gameNameHidden.value = g.game_name;
             selectedGame = g;

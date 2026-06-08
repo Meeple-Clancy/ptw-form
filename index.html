@@ -47,16 +47,14 @@
   <body>
     <h1>Play to Win Entry</h1>
 
-    <!-- NOTE: no method / action here -->
     <form id="ptw-form">
       <label for="game-input">Game (type name or catalog ID)</label>
       <input type="text" id="game-input" autocomplete="off" required>
       <ul id="suggestions"></ul>
 
-      <!-- hidden fields sent to Apps Script -->
-      <input type="hidden" id="game-name"  name="game_name">
+      <input type="hidden" id="game-name" name="game_name">
       <input type="hidden" id="catalog-id" name="catalogID">
-      <input type="hidden" id="ptw-id"     name="PTWID">
+      <input type="hidden" id="ptw-id" name="PTWID">
 
       <label for="badge">Badge number</label>
       <input type="text" id="badge" name="badge" required>
@@ -70,15 +68,10 @@
 
     <script>
       document.addEventListener('DOMContentLoaded', () => {
-        const games = [
-          { catalogID: 'WING-001', game_name: 'Wingspan', PTWID: 1 },
-          { catalogID: 'WING-002', game_name: 'Wingspan', PTWID: 1 },
-          { catalogID: 'HEAT-001', game_name: 'Heat: Pedal to the Metal', PTWID: 2 }
-          // add all your games here
-        ];
-
         const WEB_APP_URL =
           'https://script.google.com/macros/s/AKfycbzzyTVa-WYFfIuznmdcSqFtvGr4pyqnit9YACqKewnn8agKDS_qCT3iQ-bS4h9RRqGkvQ/exec';
+
+        let games = [];
 
         const gameInput      = document.getElementById('game-input');
         const suggestions    = document.getElementById('suggestions');
@@ -90,8 +83,31 @@
 
         let selectedGame = null;
 
+        async function loadGames() {
+          statusEl.textContent = 'Loading games...';
+
+          try {
+            const resp = await fetch(WEB_APP_URL + '?mode=games');
+            games = await resp.json();
+
+            if (!Array.isArray(games)) {
+              games = [];
+              statusEl.textContent = 'Could not load game list.';
+              return;
+            }
+
+            statusEl.textContent = '';
+          } catch (err) {
+            console.error(err);
+            games = [];
+            statusEl.textContent = 'Could not load game list.';
+          }
+        }
+
+        loadGames();
+
         gameInput.addEventListener('input', () => {
-          const q = gameInput.value.toLowerCase();
+          const q = gameInput.value.toLowerCase().trim();
           suggestions.innerHTML = '';
           gameNameHidden.value = '';
           catalogHidden.value = '';
@@ -102,8 +118,8 @@
 
           games
             .filter(g =>
-              g.game_name.toLowerCase().includes(q) ||
-              g.catalogID.toLowerCase().includes(q)
+              String(g.game_name).toLowerCase().includes(q) ||
+              String(g.catalogID).toLowerCase().includes(q)
             )
             .slice(0, 10)
             .forEach(g => {
@@ -122,13 +138,13 @@
         });
 
         form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+
           if (!selectedGame) {
-            e.preventDefault();
             statusEl.textContent = 'Please choose a game from the list.';
             return;
           }
 
-          e.preventDefault();  // stop normal navigation
           statusEl.textContent = 'Saving entry...';
 
           try {
@@ -137,6 +153,7 @@
               method: 'POST',
               body: formData
             });
+
             const data = await resp.json();
 
             if (data.status === 'ok') {

@@ -8,18 +8,28 @@
         font-family: Arial, sans-serif;
         max-width: 800px;
         margin: 40px auto;
+        padding: 0 16px;
       }
+
       label {
         display: block;
         margin-top: 16px;
         margin-bottom: 4px;
+        font-weight: bold;
       }
+
       input[type="text"],
       textarea {
         width: 100%;
         padding: 8px;
         box-sizing: border-box;
+        font-size: 16px;
       }
+
+      textarea {
+        resize: vertical;
+      }
+
       ul#suggestions {
         list-style: none;
         margin: 4px 0 0;
@@ -28,25 +38,82 @@
         max-height: 150px;
         overflow-y: auto;
       }
+
       ul#suggestions li {
-        padding: 4px 8px;
+        padding: 6px 8px;
         cursor: pointer;
       }
+
       ul#suggestions li:hover {
         background: #eee;
       }
+
       button {
         margin-top: 20px;
         padding: 10px 18px;
+        font-size: 16px;
+        cursor: pointer;
       }
+
       #status {
         margin-top: 16px;
         font-weight: bold;
       }
+
       .help-text {
         font-size: 0.9em;
         color: #555;
         margin-top: 4px;
+      }
+
+      .badge-preview {
+        margin-top: 16px;
+        padding: 12px;
+        border: 1px solid #ccc;
+        background: #fafafa;
+      }
+
+      .badge-preview h3 {
+        margin: 0 0 10px 0;
+        font-size: 1rem;
+      }
+
+      .badge-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .badge-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        border: 1px solid #ddd;
+        background: white;
+      }
+
+      .badge-item input[type="checkbox"] {
+        width: auto;
+      }
+
+      .badge-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+      }
+
+      .badge-actions button {
+        margin-top: 0;
+        padding: 6px 10px;
+        font-size: 14px;
+      }
+
+      .muted {
+        color: #666;
+        font-size: 0.95em;
       }
     </style>
   </head>
@@ -74,6 +141,17 @@
         Example: 25, 26, 27 or one badge number per line.
       </div>
 
+      <div class="badge-preview" id="badge-preview" style="display:none;">
+        <h3>Badges to submit</h3>
+        <div class="muted">Uncheck any badge you do not want included.</div>
+        <div class="badge-actions">
+          <button type="button" id="check-all">Check all</button>
+          <button type="button" id="uncheck-all">Uncheck all</button>
+          <button type="button" id="refresh-badges">Refresh list</button>
+        </div>
+        <div class="badge-list" id="badge-list"></div>
+      </div>
+
       <button type="submit">Submit entry</button>
     </form>
 
@@ -88,13 +166,20 @@
 
         let games = [];
 
-        const gameInput      = document.getElementById('game-input');
-        const suggestions    = document.getElementById('suggestions');
+        const gameInput = document.getElementById('game-input');
+        const suggestions = document.getElementById('suggestions');
         const gameNameHidden = document.getElementById('game-name');
-        const catalogHidden  = document.getElementById('catalog-id');
-        const ptwHidden      = document.getElementById('ptw-id');
-        const form           = document.getElementById('ptw-form');
-        const statusEl       = document.getElementById('status');
+        const catalogHidden = document.getElementById('catalog-id');
+        const ptwHidden = document.getElementById('ptw-id');
+        const form = document.getElementById('ptw-form');
+        const statusEl = document.getElementById('status');
+
+        const badgeTextarea = document.getElementById('badge');
+        const badgePreview = document.getElementById('badge-preview');
+        const badgeList = document.getElementById('badge-list');
+        const checkAllBtn = document.getElementById('check-all');
+        const uncheckAllBtn = document.getElementById('uncheck-all');
+        const refreshBadgesBtn = document.getElementById('refresh-badges');
 
         let selectedGame = null;
 
@@ -119,6 +204,62 @@
             games = [];
             statusEl.textContent = 'Could not load game list.';
           }
+        }
+
+        function parseBadges(text) {
+          const parts = text
+            .split(/[\n,\s]+/)
+            .map(x => x.trim())
+            .filter(x => x !== '');
+
+          const unique = [];
+          const seen = new Set();
+
+          parts.forEach(badge => {
+            if (!seen.has(badge)) {
+              seen.add(badge);
+              unique.push(badge);
+            }
+          });
+
+          return unique;
+        }
+
+        function renderBadgePreview() {
+          const badges = parseBadges(badgeTextarea.value);
+          badgeList.innerHTML = '';
+
+          if (badges.length === 0) {
+            badgePreview.style.display = 'none';
+            return;
+          }
+
+          badgePreview.style.display = 'block';
+
+          badges.forEach((badge, index) => {
+            const wrapper = document.createElement('label');
+            wrapper.className = 'badge-item';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'badge-check';
+            checkbox.value = badge;
+            checkbox.checked = true;
+            checkbox.id = 'badge-check-' + index;
+
+            const span = document.createElement('span');
+            span.textContent = badge;
+
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(span);
+            badgeList.appendChild(wrapper);
+          });
+        }
+
+        function getCheckedBadges() {
+          return Array.from(document.querySelectorAll('.badge-check'))
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
         }
 
         loadGames();
@@ -154,6 +295,21 @@
             });
         });
 
+        badgeTextarea.addEventListener('input', renderBadgePreview);
+        refreshBadgesBtn.addEventListener('click', renderBadgePreview);
+
+        checkAllBtn.addEventListener('click', () => {
+          document.querySelectorAll('.badge-check').forEach(cb => {
+            cb.checked = true;
+          });
+        });
+
+        uncheckAllBtn.addEventListener('click', () => {
+          document.querySelectorAll('.badge-check').forEach(cb => {
+            cb.checked = false;
+          });
+        });
+
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
 
@@ -162,10 +318,24 @@
             return;
           }
 
+          renderBadgePreview();
+
+          const checkedBadges = getCheckedBadges();
+
+          if (checkedBadges.length === 0) {
+            statusEl.textContent = 'Please leave at least one badge checked.';
+            return;
+          }
+
           statusEl.textContent = 'Saving entry...';
 
           try {
-            const formData = new FormData(form);
+            const formData = new FormData();
+            formData.append('game_name', gameNameHidden.value);
+            formData.append('catalogID', catalogHidden.value);
+            formData.append('PTWID', ptwHidden.value);
+            formData.append('badge', checkedBadges.join('\n'));
+
             const resp = await fetch(WEB_APP_URL, {
               method: 'POST',
               body: formData
@@ -173,7 +343,7 @@
             const data = await resp.json();
 
             if (data.status === 'ok') {
-              const count = data.count || 1;
+              const count = data.count || checkedBadges.length;
               statusEl.textContent =
                 count + ' entr' + (count === 1 ? 'y' : 'ies') + ' submitted. You can now enter another.';
 
@@ -183,6 +353,8 @@
               catalogHidden.value = '';
               ptwHidden.value = '';
               selectedGame = null;
+              badgeList.innerHTML = '';
+              badgePreview.style.display = 'none';
             } else {
               statusEl.textContent = data.message || 'There was a problem recording your entry.';
             }

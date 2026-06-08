@@ -132,7 +132,7 @@
   <body>
     <h1>Play to Win Entry</h1>
 
-    <form id="ptw-form">
+    <form id="ptw-form" autocomplete="off">
       <label for="game-input">Game (type name or catalog ID)</label>
       <input type="text" id="game-input" autocomplete="off" required>
       <ul id="suggestions"></ul>
@@ -141,7 +141,7 @@
       <input type="hidden" id="catalog-id" name="catalogID">
       <input type="hidden" id="ptw-id" name="PTWID">
 
-      <label for="badge">Badge number(s) of players</label>
+      <label for="badge">BADGE NUMBER(S) OF PLAYERS</label>
       <textarea
         id="badge"
         rows="5"
@@ -149,12 +149,12 @@
         placeholder="Enter one badge per line, or separate with commas"
       ></textarea>
       <div class="help-text">
-        Example: 25, 26, 27 or one badge number per line.
+        Enter all badge numbers of those who played; including yourself.
       </div>
 
       <div class="badge-preview" id="badge-preview" style="display:none;">
-        <h3>Badges entered to win</h3>
-        <div class="muted">Uncheck any badge you do not want entered to win.</div>
+        <h3>BADGES ENTERED TO WIN GAME</h3>
+        <div class="muted">Uncheck any badge that does not want to be entered to win.</div>
 
         <div class="badge-actions">
           <button type="button" id="check-all">Check all</button>
@@ -180,6 +180,7 @@
         let selectedGame = null;
         let filteredGames = [];
         let activeSuggestionIndex = -1;
+        let badgeState = {};
 
         const gameInput = document.getElementById('game-input');
         const suggestions = document.getElementById('suggestions');
@@ -226,7 +227,7 @@
         }
 
         function selectGame(g) {
-          gameInput.value = g.catalogID;
+          gameInput.value = g.game_name;
           gameNameHidden.value = g.game_name;
           catalogHidden.value = g.catalogID;
           ptwHidden.value = g.PTWID;
@@ -300,17 +301,23 @@
           return unique;
         }
 
-        function getCurrentCheckedMap() {
-          const map = {};
-          document.querySelectorAll('.badge-check').forEach(cb => {
-            map[cb.value] = cb.checked;
+        function syncBadgeStateToCurrentList(badges) {
+          const nextState = {};
+
+          badges.forEach(badge => {
+            if (Object.prototype.hasOwnProperty.call(badgeState, badge)) {
+              nextState[badge] = badgeState[badge];
+            } else {
+              nextState[badge] = true;
+            }
           });
-          return map;
+
+          badgeState = nextState;
         }
 
         function renderBadgePreview() {
           const badges = parseBadges(badgeTextarea.value);
-          const checkedMap = getCurrentCheckedMap();
+          syncBadgeStateToCurrentList(badges);
           badgeList.innerHTML = '';
 
           if (badges.length === 0) {
@@ -330,12 +337,11 @@
             checkbox.className = 'badge-check';
             checkbox.value = badge;
             checkbox.id = 'badge-check-' + index;
+            checkbox.checked = !!badgeState[badge];
 
-            if (Object.prototype.hasOwnProperty.call(checkedMap, badge)) {
-              checkbox.checked = checkedMap[badge];
-            } else {
-              checkbox.checked = true;
-            }
+            checkbox.addEventListener('change', () => {
+              badgeState[badge] = checkbox.checked;
+            });
 
             const text = document.createElement('span');
             text.textContent = badge;
@@ -351,9 +357,7 @@
         }
 
         function getCheckedBadges() {
-          return Array.from(document.querySelectorAll('.badge-check'))
-            .filter(cb => cb.checked)
-            .map(cb => cb.value);
+          return getAllBadges().filter(badge => badgeState[badge]);
         }
 
         loadGames();
@@ -387,15 +391,17 @@
         badgeTextarea.addEventListener('change', renderBadgePreview);
 
         checkAllBtn.addEventListener('click', () => {
-          document.querySelectorAll('.badge-check').forEach(cb => {
-            cb.checked = true;
+          Object.keys(badgeState).forEach(badge => {
+            badgeState[badge] = true;
           });
+          renderBadgePreview();
         });
 
         uncheckAllBtn.addEventListener('click', () => {
-          document.querySelectorAll('.badge-check').forEach(cb => {
-            cb.checked = false;
+          Object.keys(badgeState).forEach(badge => {
+            badgeState[badge] = false;
           });
+          renderBadgePreview();
         });
 
         form.addEventListener('submit', async (e) => {
@@ -444,6 +450,7 @@
               selectedGame = null;
               filteredGames = [];
               activeSuggestionIndex = -1;
+              badgeState = {};
               badgeList.innerHTML = '';
               badgePreview.style.display = 'none';
             } else {

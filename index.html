@@ -300,8 +300,17 @@
           return unique;
         }
 
+        function getCurrentCheckedMap() {
+          const map = {};
+          document.querySelectorAll('.badge-check').forEach(cb => {
+            map[cb.value] = cb.checked;
+          });
+          return map;
+        }
+
         function renderBadgePreview() {
           const badges = parseBadges(badgeTextarea.value);
+          const checkedMap = getCurrentCheckedMap();
           badgeList.innerHTML = '';
 
           if (badges.length === 0) {
@@ -320,8 +329,13 @@
             checkbox.type = 'checkbox';
             checkbox.className = 'badge-check';
             checkbox.value = badge;
-            checkbox.checked = true;
             checkbox.id = 'badge-check-' + index;
+
+            if (Object.prototype.hasOwnProperty.call(checkedMap, badge)) {
+              checkbox.checked = checkedMap[badge];
+            } else {
+              checkbox.checked = true;
+            }
 
             const text = document.createElement('span');
             text.textContent = badge;
@@ -391,8 +405,6 @@
             statusEl.textContent = 'Please choose a game from the list.';
             return;
           }
-
-          renderBadgePreview();
 
           const allBadges = getAllBadges();
           const checkedBadges = getCheckedBadges();

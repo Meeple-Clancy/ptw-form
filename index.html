@@ -49,8 +49,9 @@
         cursor: pointer;
       }
 
-      ul#suggestions li:hover {
-        background: #eee;
+      ul#suggestions li:hover,
+      ul#suggestions li.active {
+        background: #dfefff;
       }
 
       button {
@@ -178,6 +179,8 @@
 
         let games = [];
         let selectedGame = null;
+        let filteredGames = [];
+        let activeSuggestionIndex = -1;
 
         const gameInput = document.getElementById('game-input');
         const suggestions = document.getElementById('suggestions');
@@ -216,6 +219,69 @@
             games = [];
             statusEl.textContent = 'Could not load game list.';
           }
+        }
+
+        function clearSelectedGame() {
+          gameNameHidden.value = '';
+          catalogHidden.value = '';
+          ptwHidden.value = '';
+          selectedGame = null;
+        }
+
+        function selectGame(g) {
+          gameInput.value = g.catalogID;
+          gameNameHidden.value = g.game_name;
+          catalogHidden.value = g.catalogID;
+          ptwHidden.value = g.PTWID;
+          selectedGame = g;
+          suggestions.innerHTML = '';
+          filteredGames = [];
+          activeSuggestionIndex = -1;
+        }
+
+        function renderSuggestions(list) {
+          suggestions.innerHTML = '';
+
+          if (!list.length) {
+            activeSuggestionIndex = -1;
+            return;
+          }
+
+          list.forEach((g, index) => {
+            const li = document.createElement('li');
+            li.textContent = g.game_name + ' (' + g.catalogID + ')';
+
+            if (index === activeSuggestionIndex) {
+              li.classList.add('active');
+            }
+
+            li.addEventListener('mousedown', (e) => {
+              e.preventDefault();
+              selectGame(g);
+            });
+
+            suggestions.appendChild(li);
+          });
+        }
+
+        function updateSuggestions() {
+          const q = gameInput.value.toLowerCase().trim();
+
+          suggestions.innerHTML = '';
+          clearSelectedGame();
+          filteredGames = [];
+          activeSuggestionIndex = -1;
+
+          if (!q) return;
+
+          filteredGames = games
+            .filter(g =>
+              String(g.game_name).toLowerCase().includes(q) ||
+              String(g.catalogID).toLowerCase().includes(q)
+            )
+            .slice(0, 10);
+
+          renderSuggestions(filteredGames);
         }
 
         function parseBadges(text) {
@@ -278,38 +344,29 @@
 
         loadGames();
 
-        gameInput.addEventListener('input', () => {
-          const q = gameInput.value.toLowerCase().trim();
+        gameInput.addEventListener('input', updateSuggestions);
 
-          suggestions.innerHTML = '';
-          gameNameHidden.value = '';
-          catalogHidden.value = '';
-          ptwHidden.value = '';
-          selectedGame = null;
+        gameInput.addEventListener('keydown', (e) => {
+          if (!filteredGames.length) return;
 
-          if (!q) return;
-
-          games
-            .filter(g =>
-              String(g.game_name).toLowerCase().includes(q) ||
-              String(g.catalogID).toLowerCase().includes(q)
-            )
-            .slice(0, 10)
-            .forEach(g => {
-              const li = document.createElement('li');
-              li.textContent = g.game_name + ' (' + g.catalogID + ')';
-
-              li.addEventListener('click', () => {
-                gameInput.value = g.catalogID;
-                gameNameHidden.value = g.game_name;
-                catalogHidden.value = g.catalogID;
-                ptwHidden.value = g.PTWID;
-                selectedGame = g;
-                suggestions.innerHTML = '';
-              });
-
-              suggestions.appendChild(li);
-            });
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeSuggestionIndex = Math.min(activeSuggestionIndex + 1, filteredGames.length - 1);
+            renderSuggestions(filteredGames);
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeSuggestionIndex = Math.max(activeSuggestionIndex - 1, 0);
+            renderSuggestions(filteredGames);
+          } else if (e.key === 'Enter') {
+            if (activeSuggestionIndex >= 0 && filteredGames[activeSuggestionIndex]) {
+              e.preventDefault();
+              selectGame(filteredGames[activeSuggestionIndex]);
+            }
+          } else if (e.key === 'Escape') {
+            suggestions.innerHTML = '';
+            filteredGames = [];
+            activeSuggestionIndex = -1;
+          }
         });
 
         badgeTextarea.addEventListener('input', renderBadgePreview);
@@ -373,6 +430,8 @@
               catalogHidden.value = '';
               ptwHidden.value = '';
               selectedGame = null;
+              filteredGames = [];
+              activeSuggestionIndex = -1;
               badgeList.innerHTML = '';
               badgePreview.style.display = 'none';
             } else {

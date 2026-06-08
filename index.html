@@ -11,6 +11,10 @@
         padding: 0 16px;
       }
 
+      h1 {
+        margin-bottom: 24px;
+      }
+
       label {
         display: block;
         margin-top: 16px;
@@ -35,12 +39,13 @@
         margin: 4px 0 0;
         padding: 0;
         border: 1px solid #ccc;
-        max-height: 150px;
+        max-height: 180px;
         overflow-y: auto;
+        background: #fff;
       }
 
       ul#suggestions li {
-        padding: 6px 8px;
+        padding: 8px 10px;
         cursor: pointer;
       }
 
@@ -74,28 +79,13 @@
       }
 
       .badge-preview h3 {
-        margin: 0 0 10px 0;
+        margin: 0 0 8px 0;
         font-size: 1rem;
       }
 
-      .badge-list {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 8px;
-        margin-top: 8px;
-      }
-
-      .badge-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 8px;
-        border: 1px solid #ddd;
-        background: white;
-      }
-
-      .badge-item input[type="checkbox"] {
-        width: auto;
+      .muted {
+        color: #666;
+        font-size: 0.95em;
       }
 
       .badge-actions {
@@ -105,15 +95,33 @@
         flex-wrap: wrap;
       }
 
-      .badge-actions button {
-        margin-top: 0;
-        padding: 6px 10px;
+      .badge-actions button,
+      #preview-badges-btn {
+        margin-top: 10px;
+        padding: 8px 12px;
         font-size: 14px;
       }
 
-      .muted {
-        color: #666;
-        font-size: 0.95em;
+      .badge-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .badge-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border: 1px solid #ddd;
+        background: #fff;
+        border-radius: 4px;
+      }
+
+      .badge-item input[type="checkbox"] {
+        width: auto;
+        margin: 0;
       }
     </style>
   </head>
@@ -141,14 +149,18 @@
         Example: 25, 26, 27 or one badge number per line.
       </div>
 
+      <button type="button" id="preview-badges-btn">Show badge preview</button>
+
       <div class="badge-preview" id="badge-preview" style="display:none;">
         <h3>Badges to submit</h3>
         <div class="muted">Uncheck any badge you do not want included.</div>
+
         <div class="badge-actions">
           <button type="button" id="check-all">Check all</button>
           <button type="button" id="uncheck-all">Uncheck all</button>
           <button type="button" id="refresh-badges">Refresh list</button>
         </div>
+
         <div class="badge-list" id="badge-list"></div>
       </div>
 
@@ -165,6 +177,7 @@
           'https://script.google.com/macros/s/AKfycbzZ_VoEs8zaAWEs6Hh8KkJCIcSfwJ3Lv-k5Ft12fSsW8E5fszpYqiP362TjSj80b9dA/exec';
 
         let games = [];
+        let selectedGame = null;
 
         const gameInput = document.getElementById('game-input');
         const suggestions = document.getElementById('suggestions');
@@ -177,11 +190,10 @@
         const badgeTextarea = document.getElementById('badge');
         const badgePreview = document.getElementById('badge-preview');
         const badgeList = document.getElementById('badge-list');
+        const previewBadgesBtn = document.getElementById('preview-badges-btn');
         const checkAllBtn = document.getElementById('check-all');
         const uncheckAllBtn = document.getElementById('uncheck-all');
         const refreshBadgesBtn = document.getElementById('refresh-badges');
-
-        let selectedGame = null;
 
         async function loadGames() {
           statusEl.textContent = 'Loading games...';
@@ -239,6 +251,7 @@
           badges.forEach((badge, index) => {
             const wrapper = document.createElement('label');
             wrapper.className = 'badge-item';
+            wrapper.setAttribute('for', 'badge-check-' + index);
 
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
@@ -246,12 +259,13 @@
             checkbox.value = badge;
             checkbox.checked = true;
             checkbox.id = 'badge-check-' + index;
+            checkbox.name = 'badge-check';
 
-            const span = document.createElement('span');
-            span.textContent = badge;
+            const text = document.createElement('span');
+            text.textContent = badge;
 
             wrapper.appendChild(checkbox);
-            wrapper.appendChild(span);
+            wrapper.appendChild(text);
             badgeList.appendChild(wrapper);
           });
         }
@@ -266,6 +280,7 @@
 
         gameInput.addEventListener('input', () => {
           const q = gameInput.value.toLowerCase().trim();
+
           suggestions.innerHTML = '';
           gameNameHidden.value = '';
           catalogHidden.value = '';
@@ -282,20 +297,24 @@
             .slice(0, 10)
             .forEach(g => {
               const li = document.createElement('li');
-              li.textContent = `${g.game_name} (${g.catalogID})`;
-              li.onclick = () => {
+              li.textContent = g.game_name + ' (' + g.catalogID + ')';
+
+              li.addEventListener('click', () => {
                 gameInput.value = g.catalogID;
                 gameNameHidden.value = g.game_name;
                 catalogHidden.value = g.catalogID;
                 ptwHidden.value = g.PTWID;
                 selectedGame = g;
                 suggestions.innerHTML = '';
-              };
+              });
+
               suggestions.appendChild(li);
             });
         });
 
         badgeTextarea.addEventListener('input', renderBadgePreview);
+        badgeTextarea.addEventListener('change', renderBadgePreview);
+        previewBadgesBtn.addEventListener('click', renderBadgePreview);
         refreshBadgesBtn.addEventListener('click', renderBadgePreview);
 
         checkAllBtn.addEventListener('click', () => {
@@ -340,6 +359,7 @@
               method: 'POST',
               body: formData
             });
+
             const data = await resp.json();
 
             if (data.status === 'ok') {

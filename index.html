@@ -141,10 +141,9 @@
       <input type="hidden" id="catalog-id" name="catalogID">
       <input type="hidden" id="ptw-id" name="PTWID">
 
-      <label for="badge">Badge number(s)</label>
+      <label for="badge">Badge number(s) of players</label>
       <textarea
         id="badge"
-        name="badge"
         rows="5"
         required
         placeholder="Enter one badge per line, or separate with commas"
@@ -154,8 +153,8 @@
       </div>
 
       <div class="badge-preview" id="badge-preview" style="display:none;">
-        <h3>Badges to submit</h3>
-        <div class="muted">Uncheck any badge you do not want included.</div>
+        <h3>Badges entered to win</h3>
+        <div class="muted">Uncheck any badge you do not want entered to win.</div>
 
         <div class="badge-actions">
           <button type="button" id="check-all">Check all</button>
@@ -323,7 +322,6 @@
             checkbox.value = badge;
             checkbox.checked = true;
             checkbox.id = 'badge-check-' + index;
-            checkbox.name = 'badge-check';
 
             const text = document.createElement('span');
             text.textContent = badge;
@@ -332,6 +330,10 @@
             row.appendChild(text);
             badgeList.appendChild(row);
           });
+        }
+
+        function getAllBadges() {
+          return parseBadges(badgeTextarea.value);
         }
 
         function getCheckedBadges() {
@@ -392,10 +394,11 @@
 
           renderBadgePreview();
 
+          const allBadges = getAllBadges();
           const checkedBadges = getCheckedBadges();
 
-          if (checkedBadges.length === 0) {
-            statusEl.textContent = 'Please leave at least one badge checked.';
+          if (allBadges.length === 0) {
+            statusEl.textContent = 'Please enter at least one badge number.';
             return;
           }
 
@@ -406,7 +409,8 @@
             formData.append('game_name', gameNameHidden.value);
             formData.append('catalogID', catalogHidden.value);
             formData.append('PTWID', ptwHidden.value);
-            formData.append('badge', checkedBadges.join('\n'));
+            formData.append('all_badges', allBadges.join('\n'));
+            formData.append('entered_badges', checkedBadges.join('\n'));
 
             const resp = await fetch(WEB_APP_URL, {
               method: 'POST',
@@ -416,7 +420,7 @@
             const data = await resp.json();
 
             if (data.status === 'ok') {
-              const count = data.count || checkedBadges.length;
+              const count = data.count || allBadges.length;
               statusEl.textContent =
                 count + ' entr' + (count === 1 ? 'y' : 'ies') + ' submitted. You can now enter another.';
 

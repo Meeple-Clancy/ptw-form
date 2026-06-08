@@ -14,7 +14,8 @@
         margin-top: 16px;
         margin-bottom: 4px;
       }
-      input[type="text"] {
+      input[type="text"],
+      textarea {
         width: 100%;
         padding: 8px;
         box-sizing: border-box;
@@ -42,6 +43,11 @@
         margin-top: 16px;
         font-weight: bold;
       }
+      .help-text {
+        font-size: 0.9em;
+        color: #555;
+        margin-top: 4px;
+      }
     </style>
   </head>
   <body>
@@ -56,19 +62,28 @@
       <input type="hidden" id="catalog-id" name="catalogID">
       <input type="hidden" id="ptw-id" name="PTWID">
 
-      <label for="badge">Badge number</label>
-      <input type="text" id="badge" name="badge" required>
+      <label for="badge">Badge number(s)</label>
+      <textarea
+        id="badge"
+        name="badge"
+        rows="5"
+        required
+        placeholder="Enter one badge per line, or separate with commas"
+      ></textarea>
+      <div class="help-text">
+        Example: 25, 26, 27 or one badge number per line.
+      </div>
 
       <button type="submit">Submit entry</button>
     </form>
 
     <div id="status"></div>
 
-    <p>After submitting, check your Google Sheet for the new row.</p>
+    <p>After submitting, check your Google Sheet for the new row(s).</p>
 
     <script>
       document.addEventListener('DOMContentLoaded', () => {
-          const WEB_APP_URL =
+        const WEB_APP_URL =
           'https://script.google.com/macros/s/AKfycbzZ_VoEs8zaAWEs6Hh8KkJCIcSfwJ3Lv-k5Ft12fSsW8E5fszpYqiP362TjSj80b9dA/exec';
 
         let games = [];
@@ -88,14 +103,16 @@
 
           try {
             const resp = await fetch(WEB_APP_URL + '?mode=games');
-            games = await resp.json();
+            const data = await resp.json();
 
-            if (!Array.isArray(games)) {
+            if (!Array.isArray(data)) {
+              console.error('Unexpected games response:', data);
               games = [];
               statusEl.textContent = 'Could not load game list.';
               return;
             }
 
+            games = data;
             statusEl.textContent = '';
           } catch (err) {
             console.error(err);
@@ -153,11 +170,13 @@
               method: 'POST',
               body: formData
             });
-
             const data = await resp.json();
 
             if (data.status === 'ok') {
-              statusEl.textContent = 'Entry submitted. You can now enter another.';
+              const count = data.count || 1;
+              statusEl.textContent =
+                count + ' entr' + (count === 1 ? 'y' : 'ies') + ' submitted. You can now enter another.';
+
               form.reset();
               suggestions.innerHTML = '';
               gameNameHidden.value = '';
@@ -165,7 +184,7 @@
               ptwHidden.value = '';
               selectedGame = null;
             } else {
-              statusEl.textContent = 'There was a problem recording your entry.';
+              statusEl.textContent = data.message || 'There was a problem recording your entry.';
             }
           } catch (err) {
             console.error(err);

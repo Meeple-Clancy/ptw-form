@@ -75,7 +75,7 @@
 
       .badge-preview {
         margin-top: 16px;
-        padding: 12px;
+        padding: 10px;
         border: 1px solid #ccc;
         background: #fafafa;
       }
@@ -88,37 +88,39 @@
       .muted {
         color: #666;
         font-size: 0.95em;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
       }
 
       .badge-actions {
         display: flex;
-        gap: 8px;
-        margin-top: 10px;
+        gap: 6px;
+        margin-top: 6px;
         flex-wrap: wrap;
       }
 
       .badge-actions button {
         margin-top: 0;
-        padding: 8px 12px;
+        padding: 6px 10px;
         font-size: 14px;
       }
 
       .badge-scrollbox {
-        margin-top: 12px;
+        margin-top: 8px;
         max-height: 220px;
         overflow-y: auto;
         border: 1px solid #ddd;
         background: #fff;
-        padding: 8px;
+        padding: 2px 4px;
       }
 
       .badge-row {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 6px 2px;
-        border-bottom: 1px solid #f0f0f0;
+        gap: 4px;
+        padding: 1px 0;
+        border-bottom: 1px solid #f3f3f3;
+        line-height: 1.05;
+        min-height: 22px;
       }
 
       .badge-row:last-child {
@@ -151,7 +153,7 @@
         id="badge"
         rows="5"
         required
-        placeholder="Enter one badge per line, or separate with commas"
+        placeholder="Enter one badge per line, or separate with spaces."
       ></textarea>
 
       <div class="badge-preview" id="badge-preview" style="display:none;">
@@ -288,9 +290,18 @@
           renderSuggestions(filteredGames);
         }
 
+        function sanitizeBadgeInput(value) {
+          return value
+            .replace(/[^\d\s\r\n]/g, '')
+            .replace(/\r\n/g, '\n')
+            .replace(/\r/g, '\n')
+            .replace(/[ ]{2,}/g, ' ')
+            .replace(/\n{3,}/g, '\n\n');
+        }
+
         function parseBadges(text) {
           const parts = text
-            .split(/[\n,\s]+/)
+            .split(/[\n ]+/)
             .map(x => x.trim())
             .filter(x => x !== '');
 
@@ -393,8 +404,25 @@
           }
         });
 
-        badgeTextarea.addEventListener('input', renderBadgePreview);
-        badgeTextarea.addEventListener('change', renderBadgePreview);
+        badgeTextarea.addEventListener('input', () => {
+          const start = badgeTextarea.selectionStart;
+          const end = badgeTextarea.selectionEnd;
+          const oldValue = badgeTextarea.value;
+          const newValue = sanitizeBadgeInput(oldValue);
+
+          if (oldValue !== newValue) {
+            badgeTextarea.value = newValue;
+            const newPos = Math.min(start, badgeTextarea.value.length);
+            badgeTextarea.setSelectionRange(newPos, newPos);
+          }
+
+          renderBadgePreview();
+        });
+
+        badgeTextarea.addEventListener('change', () => {
+          badgeTextarea.value = sanitizeBadgeInput(badgeTextarea.value);
+          renderBadgePreview();
+        });
 
         checkAllBtn.addEventListener('click', () => {
           Object.keys(badgeState).forEach(badge => {
@@ -417,6 +445,8 @@
             statusEl.textContent = 'Please choose a game from the list.';
             return;
           }
+
+          badgeTextarea.value = sanitizeBadgeInput(badgeTextarea.value);
 
           const allBadges = getAllBadges();
           const checkedBadges = getCheckedBadges();

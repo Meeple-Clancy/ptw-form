@@ -61,6 +61,14 @@
         cursor: pointer;
       }
 
+      .submit-row {
+        text-align: right;
+      }
+
+      .submit-row button {
+        margin-top: 20px;
+      }
+
       #status {
         margin-top: 16px;
         font-weight: bold;
@@ -168,12 +176,12 @@
         <div class="badge-scrollbox" id="badge-list"></div>
       </div>
 
-      <button type="submit">Submit entry</button>
+      <div class="submit-row">
+        <button type="submit">Submit entry</button>
+      </div>
     </form>
 
     <div id="status"></div>
-
-    <p>After submitting, check your Google Sheet for the new row(s).</p>
 
     <script>
       document.addEventListener('DOMContentLoaded', () => {
@@ -406,7 +414,6 @@
 
         badgeTextarea.addEventListener('input', () => {
           const start = badgeTextarea.selectionStart;
-          const end = badgeTextarea.selectionEnd;
           const oldValue = badgeTextarea.value;
           const newValue = sanitizeBadgeInput(oldValue);
 

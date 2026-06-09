@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8">
     <title>Play to Win Entry</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -114,7 +116,7 @@
 
       .badge-scrollbox {
         margin-top: 8px;
-        max-height: 220px;
+        max-height: 240px;
         overflow-y: auto;
         border: 1px solid #ddd;
         background: #fff;
@@ -124,11 +126,10 @@
       .badge-row {
         display: flex;
         align-items: center;
-        gap: 4px;
-        padding: 1px 0;
+        gap: 6px;
+        padding: 4px 2px;
         border-bottom: 1px solid #f3f3f3;
-        line-height: 1.05;
-        min-height: 22px;
+        line-height: 1.15;
       }
 
       .badge-row:last-child {
@@ -139,13 +140,21 @@
         width: auto;
         margin: 0;
       }
+
+      .badge-row .badge-label {
+        display: inline-block;
+      }
+
+      .badge-row .badge-name-missing {
+        color: #a33;
+      }
     </style>
   </head>
   <body>
     <h1>Play to Win Entry</h1>
 
     <form id="ptw-form" autocomplete="off">
-      <label for="game-input">GAME (type name or catalog ID)</label>
+      <label for="game-input">Game (type name or catalog ID)</label>
       <input type="text" id="game-input" autocomplete="off" required>
       <ul id="suggestions"></ul>
 
@@ -177,7 +186,7 @@
       </div>
 
       <div class="submit-row">
-        <button type="submit">SUBMIT ENTRY</button>
+        <button type="submit">Submit entry</button>
       </div>
     </form>
 
@@ -192,6 +201,9 @@
         let selectedGame = null;
         let filteredGames = [];
         let activeSuggestionIndex = -1;
+
+        let badges = [];
+        let badgeLookup = {};
         let badgeState = {};
 
         const gameInput = document.getElementById('game-input');
@@ -209,8 +221,6 @@
         const uncheckAllBtn = document.getElementById('uncheck-all');
 
         async function loadGames() {
-          statusEl.textContent = 'Loading games...';
-
           try {
             const resp = await fetch(WEB_APP_URL + '?mode=games');
             const data = await resp.json();
@@ -218,16 +228,43 @@
             if (!Array.isArray(data)) {
               console.error('Unexpected games response:', data);
               games = [];
-              statusEl.textContent = 'Could not load game list.';
               return;
             }
 
             games = data;
-            statusEl.textContent = '';
           } catch (err) {
-            console.error(err);
+            console.error('Could not load games', err);
             games = [];
-            statusEl.textContent = 'Could not load game list.';
+          }
+        }
+
+        async function loadBadges() {
+          try {
+            const resp = await fetch(WEB_APP_URL + '?mode=badges');
+            const data = await resp.json();
+
+            if (!Array.isArray(data)) {
+              console.error('Unexpected badges response:', data);
+              badges = [];
+              badgeLookup = {};
+              return;
+            }
+
+            badges = data;
+            badgeLookup = {};
+
+            badges.forEach(b => {
+              const number = String(b.badge_number || '').trim();
+              const name = String(b.name_full || '').trim();
+
+              if (number) {
+                badgeLookup[number] = name;
+              }
+            });
+          } catch (err) {
+            console.error('Could not load badges', err);
+            badges = [];
+            badgeLookup = {};
           }
         }
 
@@ -326,10 +363,10 @@
           return unique;
         }
 
-        function syncBadgeStateToCurrentList(badges) {
+        function syncBadgeStateToCurrentList(badgeNumbers) {
           const nextState = {};
 
-          badges.forEach(badge => {
+          badgeNumbers.forEach(badge => {
             if (Object.prototype.hasOwnProperty.call(badgeState, badge)) {
               nextState[badge] = badgeState[badge];
             } else {
@@ -341,18 +378,18 @@
         }
 
         function renderBadgePreview() {
-          const badges = parseBadges(badgeTextarea.value);
-          syncBadgeStateToCurrentList(badges);
+          const badgeNumbers = parseBadges(badgeTextarea.value);
+          syncBadgeStateToCurrentList(badgeNumbers);
           badgeList.innerHTML = '';
 
-          if (badges.length === 0) {
+          if (badgeNumbers.length === 0) {
             badgePreview.style.display = 'none';
             return;
           }
 
           badgePreview.style.display = 'block';
 
-          badges.forEach((badge, index) => {
+          badgeNumbers.forEach((badge, index) => {
             const row = document.createElement('label');
             row.className = 'badge-row';
             row.setAttribute('for', 'badge-check-' + index);
@@ -369,7 +406,15 @@
             });
 
             const text = document.createElement('span');
-            text.textContent = badge;
+            text.className = 'badge-label';
+
+            const attendeeName = badgeLookup[badge];
+            if (attendeeName) {
+              text.textContent = badge + ' — ' + attendeeName;
+            } else {
+              text.textContent = badge + ' — name not found';
+              text.classList.add('badge-name-missing');
+            }
 
             row.appendChild(checkbox);
             row.appendChild(text);
@@ -385,7 +430,12 @@
           return getAllBadges().filter(badge => badgeState[badge]);
         }
 
-        loadGames();
+        async function init() {
+          statusEl.textContent = 'Loading games and badges...';
+          await Promise.all([loadGames(), loadBadges()]);
+          statusEl.textContent = '';
+          renderBadgePreview();
+        }
 
         gameInput.addEventListener('input', updateSuggestions);
 
@@ -463,6 +513,11 @@
             return;
           }
 
+          if (checkedBadges.length === 0) {
+            statusEl.textContent = 'Please leave at least one badge checked for entry.';
+            return;
+          }
+
           statusEl.textContent = 'Saving entry...';
 
           try {
@@ -481,7 +536,7 @@
             const data = await resp.json();
 
             if (data.status === 'ok') {
-              const count = data.count || allBadges.length;
+              const count = data.count || checkedBadges.length;
               statusEl.textContent =
                 count + ' entr' + (count === 1 ? 'y' : 'ies') + ' submitted. You can now enter another.';
 
@@ -504,6 +559,8 @@
             statusEl.textContent = 'Network or script error submitting entry.';
           }
         });
+
+        init();
       });
     </script>
   </body>

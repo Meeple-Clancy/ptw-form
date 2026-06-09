@@ -67,9 +67,10 @@
       }
 
       .help-text {
-        font-size: 0.9em;
+        font-size: 0.95em;
         color: #555;
-        margin-top: 4px;
+        margin-top: 0;
+        margin-bottom: 6px;
       }
 
       .badge-preview {
@@ -80,13 +81,14 @@
       }
 
       .badge-preview h3 {
-        margin: 0 0 8px 0;
+        margin: 0 0 4px 0;
         font-size: 1rem;
       }
 
       .muted {
         color: #666;
         font-size: 0.95em;
+        margin-bottom: 10px;
       }
 
       .badge-actions {
@@ -142,15 +144,15 @@
       <input type="hidden" id="ptw-id" name="PTWID">
 
       <label for="badge">BADGE NUMBER(S) OF PLAYERS</label>
+      <div class="help-text">
+        Enter all badge numbers of those who played; including yourself.
+      </div>
       <textarea
         id="badge"
         rows="5"
         required
         placeholder="Enter one badge per line, or separate with commas"
       ></textarea>
-      <div class="help-text">
-        Enter all badge numbers of those who played; including yourself.
-      </div>
 
       <div class="badge-preview" id="badge-preview" style="display:none;">
         <h3>BADGES ENTERED TO WIN GAME</h3>
@@ -226,8 +228,12 @@
           selectedGame = null;
         }
 
+        function displayGameValue(g) {
+          return g.game_name + ' (' + g.catalogID + ')';
+        }
+
         function selectGame(g) {
-          gameInput.value = g.game_name;
+          gameInput.value = displayGameValue(g);
           gameNameHidden.value = g.game_name;
           catalogHidden.value = g.catalogID;
           ptwHidden.value = g.PTWID;
@@ -247,7 +253,7 @@
 
           list.forEach((g, index) => {
             const li = document.createElement('li');
-            li.textContent = g.game_name + ' (' + g.catalogID + ')';
+            li.textContent = displayGameValue(g);
 
             if (index === activeSuggestionIndex) {
               li.classList.add('active');

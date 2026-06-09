@@ -144,10 +144,6 @@
       .badge-row .badge-label {
         display: inline-block;
       }
-
-      .badge-row .badge-name-missing {
-        color: #a33;
-      }
     </style>
   </head>
   <body>
@@ -201,10 +197,7 @@
         let selectedGame = null;
         let filteredGames = [];
         let activeSuggestionIndex = -1;
-
-        let badgeLookup = {};
         let badgeState = {};
-        let badgeLookupTimer = null;
 
         const gameInput = document.getElementById('game-input');
         const suggestions = document.getElementById('suggestions');
@@ -347,46 +340,6 @@
           badgeState = nextState;
         }
 
-        async function lookupBadgeName(badge) {
-          if (!badge) return '';
-
-          if (Object.prototype.hasOwnProperty.call(badgeLookup, badge)) {
-            return badgeLookup[badge];
-          }
-
-          try {
-            const resp = await fetch(
-              WEB_APP_URL + '?action=badgeLookup&badge=' + encodeURIComponent(badge)
-            );
-            const data = await resp.json();
-
-            if (data && data.status === 'ok') {
-              const name = String(data.fullName || '').trim();
-              badgeLookup[badge] = name;
-              return name;
-            }
-
-            badgeLookup[badge] = '';
-            return '';
-          } catch (err) {
-            console.error('Badge lookup failed for', badge, err);
-            badgeLookup[badge] = '';
-            return '';
-          }
-        }
-
-        async function refreshBadgeLookups() {
-          const badgeNumbers = parseBadges(badgeTextarea.value);
-
-          for (const badge of badgeNumbers) {
-            if (!Object.prototype.hasOwnProperty.call(badgeLookup, badge)) {
-              await lookupBadgeName(badge);
-            }
-          }
-
-          renderBadgePreview();
-        }
-
         function renderBadgePreview() {
           const badgeNumbers = parseBadges(badgeTextarea.value);
           syncBadgeStateToCurrentList(badgeNumbers);
@@ -417,14 +370,7 @@
 
             const text = document.createElement('span');
             text.className = 'badge-label';
-
-            const attendeeName = badgeLookup[badge];
-            if (attendeeName) {
-              text.textContent = badge + ' — ' + attendeeName;
-            } else {
-              text.textContent = badge + ' — looking up name...';
-              text.classList.add('badge-name-missing');
-            }
+            text.textContent = badge;
 
             row.appendChild(checkbox);
             row.appendChild(text);
@@ -432,12 +378,8 @@
           });
         }
 
-        function getAllBadges() {
-          return parseBadges(badgeTextarea.value);
-        }
-
         function getCheckedBadges() {
-          return getAllBadges().filter(badge => badgeState[badge]);
+          return parseBadges(badgeTextarea.value).filter(badge => badgeState[badge]);
         }
 
         async function init() {
@@ -484,17 +426,11 @@
           }
 
           renderBadgePreview();
-
-          clearTimeout(badgeLookupTimer);
-          badgeLookupTimer = setTimeout(() => {
-            refreshBadgeLookups();
-          }, 350);
         });
 
         badgeTextarea.addEventListener('change', () => {
           badgeTextarea.value = sanitizeBadgeInput(badgeTextarea.value);
           renderBadgePreview();
-          refreshBadgeLookups();
         });
 
         checkAllBtn.addEventListener('click', () => {
@@ -558,7 +494,6 @@
               filteredGames = [];
               activeSuggestionIndex = -1;
               badgeState = {};
-              badgeLookup = {};
               badgeList.innerHTML = '';
               badgePreview.style.display = 'none';
             } else {

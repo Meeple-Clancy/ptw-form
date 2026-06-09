@@ -378,8 +378,12 @@
           });
         }
 
+        function getAllBadges() {
+          return parseBadges(badgeTextarea.value);
+        }
+
         function getCheckedBadges() {
-          return parseBadges(badgeTextarea.value).filter(badge => badgeState[badge]);
+          return getAllBadges().filter(badge => badgeState[badge]);
         }
 
         async function init() {
@@ -457,7 +461,13 @@
 
           badgeTextarea.value = sanitizeBadgeInput(badgeTextarea.value);
 
+          const allBadges = getAllBadges();
           const checkedBadges = getCheckedBadges();
+
+          if (allBadges.length === 0) {
+            statusEl.textContent = 'Please enter at least one badge number.';
+            return;
+          }
 
           if (checkedBadges.length === 0) {
             statusEl.textContent = 'Please leave at least one badge checked for entry.';
@@ -471,7 +481,8 @@
             formData.append('game_name', gameNameHidden.value);
             formData.append('catalogID', catalogHidden.value);
             formData.append('PTWID', ptwHidden.value);
-            formData.append('badge', checkedBadges.join('\n'));
+            formData.append('all_badges', allBadges.join('\n'));
+            formData.append('entered_badges', checkedBadges.join('\n'));
 
             const resp = await fetch(WEB_APP_URL, {
               method: 'POST',

@@ -202,9 +202,9 @@
         let filteredGames = [];
         let activeSuggestionIndex = -1;
 
-        let badges = [];
         let badgeLookup = {};
         let badgeState = {};
+        let badgeLookupTimer = null;
 
         const gameInput = document.getElementById('game-input');
         const suggestions = document.getElementById('suggestions');
@@ -238,36 +238,6 @@
           }
         }
 
-        async function loadBadges() {
-          try {
-            const resp = await fetch(WEB_APP_URL + '?mode=badges');
-            const data = await resp.json();
-
-            if (!Array.isArray(data)) {
-              console.error('Unexpected badges response:', data);
-              badges = [];
-              badgeLookup = {};
-              return;
-            }
-
-            badges = data;
-            badgeLookup = {};
-
-            badges.forEach(b => {
-              const number = String(b.badge_number || '').trim();
-              const name = String(b.name_full || '').trim();
-
-              if (number) {
-                badgeLookup[number] = name;
-              }
-            });
-          } catch (err) {
-            console.error('Could not load badges', err);
-            badges = [];
-            badgeLookup = {};
-          }
-        }
-
         function clearSelectedGame() {
           gameNameHidden.value = '';
           catalogHidden.value = '';
@@ -283,7 +253,7 @@
           gameInput.value = displayGameValue(g);
           gameNameHidden.value = g.game_name;
           catalogHidden.value = g.catalogID;
-          ptwHidden.value = g.PTWID;
+          ptwHidden.value = g.PTWID || '';
           selectedGame = g;
           suggestions.innerHTML = '';
           filteredGames = [];
@@ -377,6 +347,46 @@
           badgeState = nextState;
         }
 
+        async function lookupBadgeName(badge) {
+          if (!badge) return '';
+
+          if (Object.prototype.hasOwnProperty.call(badgeLookup, badge)) {
+            return badgeLookup[badge];
+          }
+
+          try {
+            const resp = await fetch(
+              WEB_APP_URL + '?action=badgeLookup&badge=' + encodeURIComponent(badge)
+            );
+            const data = await resp.json();
+
+            if (data && data.status === 'ok') {
+              const name = String(data.fullName || '').trim();
+              badgeLookup[badge] = name;
+              return name;
+            }
+
+            badgeLookup[badge] = '';
+            return '';
+          } catch (err) {
+            console.error('Badge lookup failed for', badge, err);
+            badgeLookup[badge] = '';
+            return '';
+          }
+        }
+
+        async function refreshBadgeLookups() {
+          const badgeNumbers = parseBadges(badgeTextarea.value);
+
+          for (const badge of badgeNumbers) {
+            if (!Object.prototype.hasOwnProperty.call(badgeLookup, badge)) {
+              await lookupBadgeName(badge);
+            }
+          }
+
+          renderBadgePreview();
+        }
+
         function renderBadgePreview() {
           const badgeNumbers = parseBadges(badgeTextarea.value);
           syncBadgeStateToCurrentList(badgeNumbers);
@@ -412,7 +422,7 @@
             if (attendeeName) {
               text.textContent = badge + ' — ' + attendeeName;
             } else {
-              text.textContent = badge + ' — name not found';
+              text.textContent = badge + ' — looking up name...';
               text.classList.add('badge-name-missing');
             }
 
@@ -431,8 +441,8 @@
         }
 
         async function init() {
-          statusEl.textContent = 'Loading games and badges...';
-          await Promise.all([loadGames(), loadBadges()]);
+          statusEl.textContent = 'Loading games...';
+          await loadGames();
           statusEl.textContent = '';
           renderBadgePreview();
         }
@@ -474,11 +484,17 @@
           }
 
           renderBadgePreview();
+
+          clearTimeout(badgeLookupTimer);
+          badgeLookupTimer = setTimeout(() => {
+            refreshBadgeLookups();
+          }, 350);
         });
 
         badgeTextarea.addEventListener('change', () => {
           badgeTextarea.value = sanitizeBadgeInput(badgeTextarea.value);
           renderBadgePreview();
+          refreshBadgeLookups();
         });
 
         checkAllBtn.addEventListener('click', () => {
@@ -505,13 +521,7 @@
 
           badgeTextarea.value = sanitizeBadgeInput(badgeTextarea.value);
 
-          const allBadges = getAllBadges();
           const checkedBadges = getCheckedBadges();
-
-          if (allBadges.length === 0) {
-            statusEl.textContent = 'Please enter at least one badge number.';
-            return;
-          }
 
           if (checkedBadges.length === 0) {
             statusEl.textContent = 'Please leave at least one badge checked for entry.';
@@ -525,8 +535,7 @@
             formData.append('game_name', gameNameHidden.value);
             formData.append('catalogID', catalogHidden.value);
             formData.append('PTWID', ptwHidden.value);
-            formData.append('all_badges', allBadges.join('\n'));
-            formData.append('entered_badges', checkedBadges.join('\n'));
+            formData.append('badge', checkedBadges.join('\n'));
 
             const resp = await fetch(WEB_APP_URL, {
               method: 'POST',
@@ -549,6 +558,7 @@
               filteredGames = [];
               activeSuggestionIndex = -1;
               badgeState = {};
+              badgeLookup = {};
               badgeList.innerHTML = '';
               badgePreview.style.display = 'none';
             } else {
